@@ -3,36 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Widget Info Magique</title>
+    <title>Widget Temps Immersif</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
         
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #0a0a0a;
+            background-color: #050505;
             color: white;
             margin: 0;
             overflow: hidden;
         }
 
         .glass-card {
-            background: rgba(24, 24, 27, 0.6);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(15, 15, 18, 0.7);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .glass-card:hover {
-            background: rgba(24, 24, 27, 0.7);
-            transform: scale(1.01);
+        /* Horloge Géante en arrière-plan */
+        .giant-bg-time {
+            font-size: 18vw;
+            font-weight: 800;
+            line-height: 1;
+            color: rgba(255, 255, 255, 0.03);
+            pointer-events: none;
+            user-select: none;
+            white-space: nowrap;
+            filter: blur(var(--blur-amount, 10px));
+            transition: filter 0.3s ease;
         }
 
-        .progress-bar {
-            height: 2px;
-            width: 0%;
-            transition: width 12s linear;
+        .time-foreground {
+            font-weight: 600;
+            letter-spacing: -0.05em;
         }
 
         .fade-in {
@@ -44,127 +51,140 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .blur-bg {
-            transition: background-image 1.2s ease-in-out, filter 1.2s ease-in-out;
+        /* Slider personnalisé */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
         }
-
-        /* Masquer la barre de défilement */
-        ::-webkit-scrollbar { display: none; }
-
-        .line-clamp-3 {
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical;  
-            overflow: hidden;
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 12px;
+            width: 12px;
+            border-radius: 50%;
+            background: white;
+            margin-top: -5px;
+            cursor: pointer;
         }
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-6 relative">
 
-    <!-- Background dynamique flouté -->
-    <div id="bg-overlay" class="absolute inset-0 opacity-20 bg-cover bg-center blur-[40px] scale-110 blur-bg"></div>
+    <!-- ARRIÈRE-PLAN : SECONDES ET MS GÉANTES -->
+    <div class="absolute inset-0 flex items-center justify-center overflow-hidden z-0">
+        <div id="giant-clock" class="giant-bg-time uppercase tabular-nums">00.000</div>
+    </div>
 
-    <div id="main-widget" class="relative z-10 w-full max-w-[580px] rounded-[2.5rem] glass-card shadow-2xl overflow-hidden cursor-pointer group">
+    <!-- BACKGROUND IMAGE FLOU -->
+    <div id="bg-overlay" class="absolute inset-0 opacity-10 bg-cover bg-center blur-[80px] scale-110 transition-all duration-1000 z-0"></div>
+
+    <div id="main-widget" class="relative z-10 w-full max-w-[580px] rounded-[3rem] glass-card shadow-2xl overflow-hidden cursor-pointer group">
         
-        <!-- En-tête avec Image -->
-        <div class="relative h-[260px] w-full overflow-hidden bg-zinc-800">
-            <img id="header-img" src="" alt="" class="w-full h-full object-cover transition-all duration-1000 scale-105 group-hover:scale-110">
-            
-            <!-- ZONE MAGIQUE : Badge cliquable -->
-            <div id="secret-badge" class="absolute top-5 left-5 flex items-center gap-2 bg-black/60 backdrop-blur-xl px-4 py-2 rounded-full border border-white/10 active:scale-95 transition-transform select-none cursor-pointer z-20">
-                <i id="category-icon" data-lucide="sparkles" class="w-4 h-4"></i>
-                <span id="category-label" class="text-[10px] font-bold tracking-[0.2em] text-white uppercase">Exploration...</span>
-                <div id="pulse-hint" class="absolute inset-0 bg-white/10 rounded-full hidden animate-pulse"></div>
+        <!-- HEADER : HEURE ET MINUTES -->
+        <div class="pt-10 px-10 flex justify-between items-start">
+            <div class="flex flex-col">
+                <div class="text-[10px] uppercase tracking-[0.4em] text-white/30 font-bold mb-1">Système Temporel</div>
+                <div id="foreground-time" class="text-6xl time-foreground tabular-nums">00:00</div>
             </div>
-
-            <div class="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-zinc-900 via-zinc-900/40 to-transparent"></div>
+            
+            <div class="text-right">
+                <div id="current-date" class="text-[10px] uppercase tracking-[0.2em] text-white/40 font-bold">--/--/--</div>
+                <div id="category-label" class="text-[9px] text-white/20 mt-1 italic">Analyse de données insolites</div>
+            </div>
         </div>
 
-        <!-- Contenu style "Post" -->
-        <div class="px-10 pb-8 -mt-8 relative z-10">
-            <div class="space-y-3 min-h-[160px]">
-                <h2 id="info-title" class="text-2xl md:text-3xl font-bold text-white leading-tight fade-in">
-                    Chargement du savoir...
-                </h2>
-                <p id="info-text" class="text-base md:text-lg font-light text-white/70 leading-relaxed line-clamp-3 fade-in">
-                    Nous parcourons les archives de l'insolite pour vous...
-                </p>
+        <!-- IMAGE PRINCIPALE -->
+        <div class="relative h-[220px] w-full mt-6 px-6 overflow-hidden">
+            <div class="w-full h-full rounded-[2rem] overflow-hidden relative border border-white/5">
+                <img id="header-img" src="" alt="" class="w-full h-full object-cover opacity-80 transition-transform duration-[2000ms] group-hover:scale-105">
+                <div class="absolute inset-0 bg-gradient-to-t from-[#0f0f12] via-transparent to-transparent"></div>
+            </div>
+        </div>
+
+        <!-- CONTENU POST -->
+        <div class="px-10 pb-8 mt-4 relative z-10">
+            <div class="min-h-[140px] space-y-3">
+                <h2 id="info-title" class="text-2xl font-bold text-white/90 leading-tight fade-in">Chargement...</h2>
+                <p id="info-text" class="text-base font-light text-white/50 leading-relaxed line-clamp-3 fade-in">Recherche d'informations improbables...</p>
             </div>
 
-            <!-- Action bouton -->
-            <div class="mt-6 flex items-center gap-4 fade-in">
-                <button class="bg-white text-black px-6 py-2.5 rounded-full text-sm font-semibold hover:bg-zinc-200 transition-colors flex items-center gap-2">
-                    Voir plus
-                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            <!-- BOUTON ET SLIDER DE FLOU -->
+            <div class="mt-8 flex items-center justify-between">
+                <button class="bg-white text-black px-6 py-2.5 rounded-full text-sm font-bold hover:scale-105 transition-all active:scale-95">
+                    Détails
                 </button>
-                <span class="text-xs text-white/40 italic font-light">Le saviez-vous ?</span>
-            </div>
-
-            <!-- Barre de progression et Footer -->
-            <div class="mt-8 space-y-4">
-                <div class="h-[1px] w-full bg-white/5 rounded-full overflow-hidden">
-                    <div id="progress" class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 w-0"></div>
-                </div>
                 
-                <div class="flex justify-between items-center text-[9px] font-bold text-white/30 uppercase tracking-[0.2em]">
-                    <div class="flex items-center gap-3">
-                        <div class="flex items-center gap-1.5 text-indigo-400">
-                            <i data-lucide="brain-circuit" class="w-3 h-3"></i>
-                            <span>IA Curiosité</span>
-                        </div>
-                        <span class="h-3 w-[1px] bg-white/10"></span>
-                        <span id="status-label">Faits Improbables</span>
-                    </div>
-                    <div class="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span>Suivant</span>
-                        <i data-lucide="chevron-right" class="w-2.5 h-2.5"></i>
-                    </div>
+                <!-- Contrôle du flou -->
+                <div class="flex flex-col items-end gap-2 group/slider">
+                    <span class="text-[8px] uppercase tracking-widest text-white/20 group-hover/slider:text-white/40 transition-colors">Ajuster le flou</span>
+                    <input type="range" id="blur-slider" min="0" max="60" value="15" class="w-32 opacity-30 group-hover/slider:opacity-100 transition-opacity">
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        const apiKey = ""; 
-        const DISPLAY_DURATION = 15000; // Un peu plus long pour lire le titre et le texte
-        let secretCount = 0;
-        let lastClickTime = 0;
+        const DISPLAY_DURATION = 15000;
         let timer = null;
+
+        // GESTION DU TEMPS (Premier plan et Arrière-plan flou)
+        const blurSlider = document.getElementById('blur-slider');
+        const giantClock = document.getElementById('giant-clock');
+
+        blurSlider.addEventListener('input', (e) => {
+            document.documentElement.style.setProperty('--blur-amount', `${e.target.value}px`);
+        });
+
+        function updateClock() {
+            const now = new Date();
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            const s = String(now.getSeconds()).padStart(2, '0');
+            const ms = String(now.getMilliseconds()).padStart(3, '0');
+            
+            const d = String(now.getDate()).padStart(2, '0');
+            const mo = String(now.getMonth() + 1).padStart(2, '0');
+            const y = now.getFullYear();
+
+            // Premier plan : Heures et Minutes uniquement
+            document.getElementById('foreground-time').innerText = `${h}:${m}`;
+            
+            // Arrière-plan flou : Secondes et Millisecondes
+            giantClock.innerText = `${s}.${ms}`;
+            
+            document.getElementById('current-date').innerText = `${d}/${mo}/${y}`;
+            
+            requestAnimationFrame(updateClock);
+        }
 
         const FACTS = [
             {
-                title: "Le concert le plus silencieux",
-                text: "En 2011, un artiste a donné un concert de 4 minutes et 33 secondes sans jouer une seule note. Le public écoutait le silence ambiant comme étant la musique.",
-                icon: 'music',
-                color: 'from-amber-400 to-orange-500',
-                bgImage: 'https://images.unsplash.com/photo-1514525253361-bee8718a74a2?auto=format&fit=crop&w=900&q=80'
+                title: "Le concert du silence",
+                text: "En 2011, un concert de 4'33\" a été donné sans aucune note jouée. Le but était d'écouter les sons naturels de l'environnement.",
+                bgImage: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=900&q=80'
             },
             {
-                title: "L'armée de l'eau lourde",
-                text: "Il existe une espèce de fourmis capable de construire des ponts vivants et des radeaux avec leurs propres corps pour survivre aux inondations en Amazonie.",
-                icon: 'bug',
-                color: 'from-green-400 to-emerald-600',
-                bgImage: 'https://images.unsplash.com/photo-1551009175-8a68da93d5f9?auto=format&fit=crop&w=900&q=80'
+                title: "Radeaux de fourmis",
+                text: "Les fourmis de feu créent des structures vivantes en se tenant les unes aux autres pour flotter lors des inondations.",
+                bgImage: 'https://images.unsplash.com/photo-1559530412-f02758220516?auto=format&fit=crop&w=900&q=80'
             },
             {
-                title: "Pluie de diamants cosmique",
-                text: "Sur Neptune et Uranus, la pression atmosphérique est si intense qu'elle peut transformer le carbone en cristaux, créant littéralement des pluies de diamants.",
-                icon: 'gem',
-                color: 'from-blue-400 to-indigo-600',
-                bgImage: 'https://images.unsplash.com/photo-1614728894747-a83421e2b9c9?auto=format&fit=crop&w=900&q=80'
+                title: "Pluies de Diamants",
+                text: "Sur Neptune, la pression atmosphérique est telle que le carbone se transforme en diamants et tombe littéralement du ciel.",
+                bgImage: 'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?auto=format&fit=crop&w=900&q=80'
             },
             {
-                title: "L'horloge de 10 000 ans",
-                text: "Une horloge géante est actuellement en construction à l'intérieur d'une montagne au Texas. Elle est conçue pour ne tinter qu'une fois par millénaire.",
-                icon: 'clock',
-                color: 'from-zinc-400 to-zinc-600',
+                title: "L'Horloge de 10 000 ans",
+                text: "Construite dans le désert du Texas, cette horloge géante ne tintera qu'une fois par millénaire pour marquer le temps long.",
                 bgImage: 'https://images.unsplash.com/photo-1508962914676-134849a727f0?auto=format&fit=crop&w=900&q=80'
             },
             {
-                title: "Le miel éternel",
-                text: "Les archéologues ont trouvé des pots de miel dans des tombes égyptiennes vieilles de 3000 ans, et le miel est encore parfaitement comestible.",
-                icon: 'archive',
-                color: 'from-yellow-400 to-orange-600',
+                title: "Miel Millénaire",
+                text: "Le miel trouvé dans les tombeaux antiques reste comestible après 3000 ans. Un aliment théoriquement éternel.",
                 bgImage: 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?auto=format&fit=crop&w=900&q=80'
             }
         ];
@@ -172,65 +192,37 @@
         async function updateWidget() {
             const fact = FACTS[Math.floor(Math.random() * FACTS.length)];
             
-            // Animation de sortie
-            const elements = ['info-title', 'info-text'];
-            elements.forEach(id => document.getElementById(id).style.opacity = '0');
-            document.getElementById('progress').style.transition = 'none';
-            document.getElementById('progress').style.width = '0%';
+            const titleEl = document.getElementById('info-title');
+            const textEl = document.getElementById('info-text');
+            const progress = document.getElementById('progress');
+
+            titleEl.style.opacity = '0';
+            textEl.style.opacity = '0';
             
-            // Mise à jour de l'UI
             setTimeout(() => {
                 document.getElementById('bg-overlay').style.backgroundImage = `url(${fact.bgImage})`;
                 document.getElementById('header-img').src = fact.bgImage;
-                document.getElementById('info-title').innerText = fact.title;
-                document.getElementById('info-text').innerText = fact.text;
-                document.getElementById('category-icon').setAttribute('data-lucide', fact.icon);
-                document.getElementById('progress').className = `h-full bg-gradient-to-r ${fact.color}`;
+                titleEl.innerText = fact.title;
+                textEl.innerText = fact.text;
                 
                 lucide.createIcons();
 
-                // Animation d'entrée
-                elements.forEach(id => {
-                    document.getElementById(id).style.opacity = '1';
-                    document.getElementById(id).classList.remove('fade-in');
-                    void document.getElementById(id).offsetWidth; // Trigger reflow
-                    document.getElementById(id).classList.add('fade-in');
-                });
-
-                // Relancer la progression
-                setTimeout(() => {
-                    document.getElementById('progress').style.transition = `width ${DISPLAY_DURATION}ms linear`;
-                    document.getElementById('progress').style.width = '100%';
-                }, 100);
+                titleEl.style.opacity = '1';
+                textEl.style.opacity = '1';
             }, 500);
 
             if (timer) clearTimeout(timer);
             timer = setTimeout(updateWidget, DISPLAY_DURATION);
         }
 
-        // Gestion de l'Easter Egg
-        document.getElementById('secret-badge').addEventListener('click', (e) => {
-            e.stopPropagation();
-            const now = Date.now();
-            if (now - lastClickTime > 1000) {
-                secretCount = 1;
-            } else {
-                secretCount++;
-                if (secretCount === 4) {
-                    document.getElementById('pulse-hint').classList.remove('hidden');
-                }
-                if (secretCount === 5) {
-                    window.location.href = "page/1.html";
-                }
-            }
-            lastClickTime = now;
-        });
-
         document.getElementById('main-widget').addEventListener('click', updateWidget);
 
         window.onload = () => {
+            requestAnimationFrame(updateClock);
             lucide.createIcons();
             updateWidget();
+            // Appliquer le flou initial
+            document.documentElement.style.setProperty('--blur-amount', '15px');
         };
     </script>
 </body>
