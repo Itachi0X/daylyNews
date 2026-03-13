@@ -151,7 +151,7 @@ export default function App() {
           {/* ZONE MAGIQUE : Badge cliquable pour l'Easter Egg */}
           <div 
             onClick={handleSecretClick}
-            className="absolute top-5 left-5 flex items-center gap-2 bg-black/50 backdrop-blur-xl px-4 py-1.5 rounded-full border border-white/10 active:scale-95 transition-transform select-none"
+            className="absolute top-5 left-5 flex items-center gap-2 bg-black/50 backdrop-blur-xl px-4 py-1.5 rounded-full border border-white/10 active:scale-95 transition-transform select-none cursor-pointer"
           >
             <CurrentIcon className={`w-3.5 h-3.5 text-transparent bg-clip-text bg-gradient-to-r ${currentData?.color} ${isLoading ? 'animate-spin' : ''}`} />
             <span className="text-[10px] font-bold tracking-[0.15em] text-white uppercase">{currentData?.label}</span>
