@@ -15,13 +15,15 @@
             color: white;
             margin: 0;
             overflow: hidden;
+            height: 100vh;
+            width: 100vw;
         }
 
         .glass-card {
             background: rgba(15, 15, 18, 0.7);
             backdrop-filter: blur(25px);
             border: 1px solid rgba(255, 255, 255, 0.08);
-            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: border 0.3s ease, transform 0.1s ease;
         }
 
         /* Horloge Géante en arrière-plan */
@@ -70,9 +72,19 @@
             margin-top: -5px;
             cursor: pointer;
         }
+
+        #main-widget {
+            position: absolute;
+            cursor: grab;
+            user-select: none;
+        }
+
+        #main-widget:active {
+            cursor: grabbing;
+        }
     </style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-6 relative">
+<body class="relative h-screen w-screen">
 
     <!-- ARRIÈRE-PLAN : SECONDES ET MS GÉANTES -->
     <div class="absolute inset-0 flex items-center justify-center overflow-hidden z-0">
@@ -82,7 +94,8 @@
     <!-- BACKGROUND IMAGE FLOU -->
     <div id="bg-overlay" class="absolute inset-0 opacity-10 bg-cover bg-center blur-[80px] scale-110 transition-all duration-1000 z-0"></div>
 
-    <div id="main-widget" class="relative z-10 w-full max-w-[580px] rounded-[3rem] glass-card shadow-2xl overflow-hidden cursor-pointer group">
+    <!-- WIDGET DEPLACABLE -->
+    <div id="main-widget" class="z-10 w-full max-w-[580px] rounded-[3rem] glass-card shadow-2xl overflow-hidden group">
         
         <!-- HEADER : HEURE ET MINUTES -->
         <div class="pt-10 px-10 flex justify-between items-start">
@@ -93,7 +106,7 @@
             
             <div class="text-right">
                 <div id="current-date" class="text-[10px] uppercase tracking-[0.2em] text-white/40 font-bold">--/--/--</div>
-                <div id="category-label" class="text-[9px] text-white/20 mt-1 italic">Analyse de données insolites</div>
+                <div id="category-label" class="text-[9px] text-white/20 mt-1 italic">Flux de données infini</div>
             </div>
         </div>
 
@@ -101,24 +114,31 @@
         <div class="relative h-[220px] w-full mt-6 px-6 overflow-hidden">
             <div class="w-full h-full rounded-[2rem] overflow-hidden relative border border-white/5">
                 <img id="header-img" src="" alt="" class="w-full h-full object-cover opacity-80 transition-transform duration-[2000ms] group-hover:scale-105">
+                
+                <!-- BOUTON SECRET -->
+                <div id="secret-badge" class="absolute top-5 left-5 flex items-center gap-2 bg-black/60 backdrop-blur-xl px-4 py-2 rounded-full border border-white/10 active:scale-95 transition-transform select-none cursor-pointer z-20">
+                    <i id="category-icon" data-lucide="shield-check" class="w-4 h-4 text-white"></i>
+                    <span id="category-label-text" class="text-[10px] font-bold tracking-[0.2em] text-white uppercase">Accès</span>
+                    <div id="pulse-hint" class="absolute inset-0 bg-white/10 rounded-full hidden animate-pulse"></div>
+                </div>
+
                 <div class="absolute inset-0 bg-gradient-to-t from-[#0f0f12] via-transparent to-transparent"></div>
             </div>
         </div>
 
         <!-- CONTENU POST -->
-        <div class="px-10 pb-8 mt-4 relative z-10">
+        <div class="px-10 pb-8 mt-4 relative z-10 pointer-events-auto">
             <div class="min-h-[140px] space-y-3">
                 <h2 id="info-title" class="text-2xl font-bold text-white/90 leading-tight fade-in">Chargement...</h2>
-                <p id="info-text" class="text-base font-light text-white/50 leading-relaxed line-clamp-3 fade-in">Recherche d'informations improbables...</p>
+                <p id="info-text" class="text-base font-light text-white/50 leading-relaxed line-clamp-3 fade-in">Synchronisation avec la base de données globale...</p>
             </div>
 
             <!-- BOUTON ET SLIDER DE FLOU -->
             <div class="mt-8 flex items-center justify-between">
-                <button class="bg-white text-black px-6 py-2.5 rounded-full text-sm font-bold hover:scale-105 transition-all active:scale-95">
-                    Détails
+                <button id="next-btn" class="bg-white text-black px-6 py-2.5 rounded-full text-sm font-bold hover:scale-105 transition-all active:scale-95">
+                    Suivant
                 </button>
                 
-                <!-- Contrôle du flou -->
                 <div class="flex flex-col items-end gap-2 group/slider">
                     <span class="text-[8px] uppercase tracking-widest text-white/20 group-hover/slider:text-white/40 transition-colors">Ajuster le flou</span>
                     <input type="range" id="blur-slider" min="0" max="60" value="15" class="w-32 opacity-30 group-hover/slider:opacity-100 transition-opacity">
@@ -128,10 +148,74 @@
     </div>
 
     <script>
+        // CONFIGURATION ET ÉTAT
         const DISPLAY_DURATION = 15000;
         let timer = null;
+        let secretCount = 0;
+        let lastClickTime = 0;
 
-        // GESTION DU TEMPS (Premier plan et Arrière-plan flou)
+        // GÉNÉRATION DE DONNÉES (+1000 entrées simulées)
+        const categories = ["Science", "Histoire", "Espace", "Nature", "Technologie", "Insolite"];
+        const headers = [
+            "Découverte majeure", "Le saviez-vous ?", "Fait improbable", 
+            "Archive mystère", "Observation spatiale", "Donnée biologique"
+        ];
+        
+        function generateDatabase(count) {
+            const db = [];
+            const images = [
+                'https://images.unsplash.com/photo-1451187580459-43490279c0fa',
+                'https://images.unsplash.com/photo-1518770660439-4636190af475',
+                'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa',
+                'https://images.unsplash.com/photo-1508962914676-134849a727f0',
+                'https://images.unsplash.com/photo-1587049352846-4a222e784d38',
+                'https://images.unsplash.com/photo-1464802686167-b939a67a06d1',
+                'https://images.unsplash.com/photo-1534067783941-51c9c23ecefd'
+            ];
+
+            for(let i = 0; i < count; i++) {
+                db.push({
+                    title: `${headers[i % headers.length]} #${1000 + i}`,
+                    text: `Information indexée n°${i} : Dans un univers parallèle de données, cette entrée représente l'une des 1000 pépites de connaissance collectées pour ce widget immersif. La probabilité que vous lisiez exactement celle-ci est de 0.001%.`,
+                    bgImage: `${images[i % images.length]}?auto=format&fit=crop&w=900&q=80`,
+                    category: categories[i % categories.length]
+                });
+            }
+            return db;
+        }
+
+        const BIG_DATABASE = generateDatabase(1050);
+
+        // DRAG AND DROP DU WIDGET
+        const widget = document.getElementById('main-widget');
+        let isDragging = false;
+        let offsetX, offsetY;
+
+        // Centrage initial
+        widget.style.left = '50%';
+        widget.style.top = '50%';
+        widget.style.transform = 'translate(-50%, -50%)';
+
+        widget.addEventListener('mousedown', (e) => {
+            if (e.target.closest('input') || e.target.closest('button')) return;
+            isDragging = true;
+            const rect = widget.getBoundingClientRect();
+            offsetX = e.clientX - rect.left;
+            offsetY = e.clientY - rect.top;
+            widget.style.transform = 'none'; // Désactive le translate pour un mouvement fluide
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            widget.style.left = `${e.clientX - offsetX}px`;
+            widget.style.top = `${e.clientY - offsetY}px`;
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        // GESTION DU TEMPS
         const blurSlider = document.getElementById('blur-slider');
         const giantClock = document.getElementById('giant-clock');
 
@@ -146,55 +230,20 @@
             const s = String(now.getSeconds()).padStart(2, '0');
             const ms = String(now.getMilliseconds()).padStart(3, '0');
             
-            const d = String(now.getDate()).padStart(2, '0');
-            const mo = String(now.getMonth() + 1).padStart(2, '0');
-            const y = now.getFullYear();
-
-            // Premier plan : Heures et Minutes uniquement
             document.getElementById('foreground-time').innerText = `${h}:${m}`;
-            
-            // Arrière-plan flou : Secondes et Millisecondes
             giantClock.innerText = `${s}.${ms}`;
-            
-            document.getElementById('current-date').innerText = `${d}/${mo}/${y}`;
+            document.getElementById('current-date').innerText = now.toLocaleDateString('fr-FR');
             
             requestAnimationFrame(updateClock);
         }
 
-        const FACTS = [
-            {
-                title: "Le concert du silence",
-                text: "En 2011, un concert de 4'33\" a été donné sans aucune note jouée. Le but était d'écouter les sons naturels de l'environnement.",
-                bgImage: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=900&q=80'
-            },
-            {
-                title: "Radeaux de fourmis",
-                text: "Les fourmis de feu créent des structures vivantes en se tenant les unes aux autres pour flotter lors des inondations.",
-                bgImage: 'https://images.unsplash.com/photo-1559530412-f02758220516?auto=format&fit=crop&w=900&q=80'
-            },
-            {
-                title: "Pluies de Diamants",
-                text: "Sur Neptune, la pression atmosphérique est telle que le carbone se transforme en diamants et tombe littéralement du ciel.",
-                bgImage: 'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?auto=format&fit=crop&w=900&q=80'
-            },
-            {
-                title: "L'Horloge de 10 000 ans",
-                text: "Construite dans le désert du Texas, cette horloge géante ne tintera qu'une fois par millénaire pour marquer le temps long.",
-                bgImage: 'https://images.unsplash.com/photo-1508962914676-134849a727f0?auto=format&fit=crop&w=900&q=80'
-            },
-            {
-                title: "Miel Millénaire",
-                text: "Le miel trouvé dans les tombeaux antiques reste comestible après 3000 ans. Un aliment théoriquement éternel.",
-                bgImage: 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?auto=format&fit=crop&w=900&q=80'
-            }
-        ];
-
+        // MISE À JOUR DU CONTENU
         async function updateWidget() {
-            const fact = FACTS[Math.floor(Math.random() * FACTS.length)];
+            const fact = BIG_DATABASE[Math.floor(Math.random() * BIG_DATABASE.length)];
             
             const titleEl = document.getElementById('info-title');
             const textEl = document.getElementById('info-text');
-            const progress = document.getElementById('progress');
+            const labelEl = document.getElementById('category-label-text');
 
             titleEl.style.opacity = '0';
             textEl.style.opacity = '0';
@@ -204,24 +253,44 @@
                 document.getElementById('header-img').src = fact.bgImage;
                 titleEl.innerText = fact.title;
                 textEl.innerText = fact.text;
+                labelEl.innerText = fact.category;
                 
-                lucide.createIcons();
-
                 titleEl.style.opacity = '1';
                 textEl.style.opacity = '1';
-            }, 500);
+            }, 400);
 
             if (timer) clearTimeout(timer);
             timer = setTimeout(updateWidget, DISPLAY_DURATION);
         }
 
-        document.getElementById('main-widget').addEventListener('click', updateWidget);
+        // BOUTON SECRET
+        document.getElementById('secret-badge').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const now = Date.now();
+            if (now - lastClickTime > 1000) {
+                secretCount = 1;
+            } else {
+                secretCount++;
+                if (secretCount === 4) document.getElementById('pulse-hint').classList.remove('hidden');
+                if (secretCount === 5) {
+                    // Action secrète : Inversion des couleurs ou redirection
+                    document.body.style.filter = 'invert(1)';
+                    setTimeout(() => document.body.style.filter = 'none', 2000);
+                    secretCount = 0;
+                }
+            }
+            lastClickTime = now;
+        });
+
+        document.getElementById('next-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            updateWidget();
+        });
 
         window.onload = () => {
             requestAnimationFrame(updateClock);
             lucide.createIcons();
             updateWidget();
-            // Appliquer le flou initial
             document.documentElement.style.setProperty('--blur-amount', '15px');
         };
     </script>
